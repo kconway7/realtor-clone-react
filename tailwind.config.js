@@ -1,6 +1,7 @@
+import Home from "./src/";
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.{html,js, jsx, ts, tsx}"],
+  content: ["./src/**/*.{jsx,js,tsx,ts,html}"],
   theme: {
     extend: {},
   },
