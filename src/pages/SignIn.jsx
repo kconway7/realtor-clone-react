@@ -14,7 +14,6 @@ export default function SignIn() {
 
   //Keeps track of email and password onchange in form
   function onChange(e) {
-    console.log(e.target.value);
     setFormData((prevState) => ({
       ...prevState,
       [e.target.id]: e.target.value,
