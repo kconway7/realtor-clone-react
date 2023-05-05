@@ -1,6 +1,26 @@
 import React, { useState } from "react";
+import Spinner from "../components/Spinner";
+import { toast } from "react-toastify";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import { v4 as uuidv4 } from "uuid";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+import { useNavigate } from "react-router";
 
 export default function CreateListing() {
+  const navigate = useNavigate();
+  const auth = getAuth();
+  // Hook for getting coordinates
+  const [geolocationEnabled, setGeolocationEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  //Hook for all relevant data for the form
   const [formData, setFormData] = useState({
     type: "rent",
     name: "",
@@ -13,6 +33,9 @@ export default function CreateListing() {
     offer: false,
     price: 0,
     discountedPrice: 0,
+    latitude: 0,
+    longitude: 0,
+    images: {},
   });
 
   const {
@@ -27,14 +50,162 @@ export default function CreateListing() {
     offer,
     price,
     discountedPrice,
+    latitude,
+    longitude,
+    images,
   } = formData;
 
-  function onChange() {}
+  //On change for keeping track of all data
+  function onChange(e) {
+    let boolean = null;
+    if (e.target.value === "true") {
+      boolean = true;
+    }
 
+    if (e.target.value === "false") {
+      boolean = false;
+    }
+
+    //Files
+    if (e.target.files) {
+      setFormData((prevState) => ({
+        ...prevState,
+        images: e.target.files,
+      }));
+    }
+
+    //Text/Boolean
+    if (!e.target.files) {
+      setFormData((prevState) => ({
+        ...prevState,
+        [e.target.id]: boolean ?? e.target.value,
+      }));
+    }
+  }
+
+  //Function to submit the form
+  async function onSubmit(e) {
+    e.preventDefault();
+
+    //Conditions
+    if (+discountedPrice >= +price) {
+      toast.error("Discounted price must be less than price");
+      return;
+    }
+
+    if (images.length > 6) {
+      toast.error("Maximum amount of images that can be uploaded is 6");
+      return;
+    }
+    //Set loading spinner on page
+    setLoading(true);
+
+    let geolocation = {};
+    // let location;
+
+    try {
+      if (geolocationEnabled) {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
+        );
+
+        const data = await response.json();
+        console.log(data);
+
+        //Returns if address is invalid
+        if (data.status === "ZERO_RESULTS") {
+          setLoading(false);
+          toast.error("The address you input was invalid");
+          return;
+        }
+
+        //Geolocation is set by address
+        geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
+        geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
+      } else {
+        //Geolocationis set manually
+        geolocation.lat = latitude;
+        geolocation.lng = longitude;
+      }
+
+      //Function to upload an image to firebase
+      async function storeImage(image) {
+        return new Promise((resolve, reject) => {
+          const storage = getStorage();
+          const filename = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+          const storageRef = ref(storage, filename);
+          const uploadTask = uploadBytesResumable(storageRef, image);
+          //CODE FROM FIREBASE DOCUMENTATION
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              // Observe state change events such as progress, pause, and resume
+              // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+              const progress =
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              console.log("Upload is " + progress + "% done");
+              switch (snapshot.state) {
+                case "paused":
+                  console.log("Upload is paused");
+                  break;
+                case "running":
+                  console.log("Upload is running");
+                  break;
+              }
+            },
+            (error) => {
+              reject(error);
+            },
+            () => {
+              // Handle successful uploads on complete
+              // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+              getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                resolve(downloadURL);
+              });
+            }
+          );
+        });
+      }
+
+      //Get all images and use the store image function to upload to firebase
+      const imgUrls = await Promise.all(
+        [...images].map((img) => storeImage(img))
+      ).catch((error) => {
+        setLoading(false);
+        toast.error("Images not uploaded");
+        return;
+      });
+
+      //Create a copy of form data
+      const formDataCopy = {
+        ...formData,
+        imgUrls,
+        geolocation,
+        timestamp: serverTimestamp(),
+      };
+      //delete unneeded data from the copy
+      delete formDataCopy.images;
+      !formDataCopy.offer && delete formDataCopy.discountedPrice;
+      delete formDataCopy.latitude;
+      delete formDataCopy.longitude;
+
+      //Add a new document to firebase for listing
+      const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+
+      setLoading(false);
+      toast.success("Listing was created!");
+      navigate(`/category/${formDataCopy.type}/${docRef.id}`);
+    } catch (error) {
+      toast.error("Oops! Something went wrong");
+      console.error(error);
+    }
+  }
+
+  if (loading) return <Spinner />;
   return (
     <main className="max-w-md px-2 mx-auto">
       <h1 className="text-3xl font-bold text-center mt-6">Create a Listing</h1>
-      <form>
+      <form onSubmit={onSubmit}>
         {/* SELL RENT BUTTONS */}
         <p className="text-lg mt-6 font-semibold">Sell / Rent</p>
         <div className="flex gap-8">
@@ -183,6 +354,39 @@ export default function CreateListing() {
           className="w-full px-4 py-2 text-xl text-gray-700 bg-white border border-gray-300 rounded transition
           duration-200 ease-in-out focus:text-gray-700 focus:bg-white focus:border-slate-600 mb-6"
         />
+        {/* LATITUDE AND LONGITUDE INPUT FIELDS */}
+        {!geolocationEnabled && (
+          <div className="flex gap-6 justify-start mb-6">
+            <div>
+              <p className="text-lg font-semibold">Latitude</p>
+              <input
+                type="number"
+                id="latitude"
+                value={latitude}
+                onChange={onChange}
+                required
+                min="-90"
+                max="90"
+                className="w-full px-4 py-2 text-lg text-gray-700 bg-white border border-gray-300 rounded transition
+                duration-200 ease-in-out focus:text-gray-700 focus:bg-white focus:border-blue-950 text-center"
+              />
+            </div>
+            <div>
+              <p className="text-lg font-semibold">Longitude</p>
+              <input
+                type="number"
+                id="longitude"
+                value={longitude}
+                onChange={onChange}
+                required
+                min="-180"
+                max="180"
+                className="w-full px-4 py-2 text-lg text-gray-700 bg-white border border-gray-300 rounded transition
+                duration-200 ease-in-out focus:text-gray-700 focus:bg-white focus:border-blue-950 text-center"
+              />
+            </div>
+          </div>
+        )}
         {/* DESCRIPTION INPUT FIELD */}
         <p className="text-lg font-semibold">Description</p>
         <textarea
@@ -224,9 +428,9 @@ export default function CreateListing() {
         {/* PRICE INPUT FIELD */}
         <div className="flex items-center mb-6">
           <div>
-            <p className="flex text-lg font-semibold gap-1">
+            <span className="flex text-lg font-semibold gap-1">
               Price For{type === "rent" ? <p>Rent</p> : <p>Sale</p>}
-            </p>
+            </span>
             <div className="flex w-full gap-6 justify-center items-center">
               <input
                 type="number"
