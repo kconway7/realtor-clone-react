@@ -182,6 +182,7 @@ export default function CreateListing() {
         imgUrls,
         geolocation,
         timestamp: serverTimestamp(),
+        userRef: auth.currentUser.uid,
       };
       //delete unneeded data from the copy
       delete formDataCopy.images;
@@ -196,7 +197,7 @@ export default function CreateListing() {
       toast.success("Listing was created!");
       navigate(`/category/${formDataCopy.type}/${docRef.id}`);
     } catch (error) {
-      toast.error("Oops! Something went wrong");
+      toast.error("Oops! Something went wrong. Try refreshing and try again.");
       console.error(error);
     }
   }
