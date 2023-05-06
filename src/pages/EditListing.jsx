@@ -78,7 +78,7 @@ export default function EditListing() {
     }
 
     fetchListing();
-  }, [navigate, params.listingId, listing]);
+  }, []);
 
   //Prevents editing of a listing from non-creators
   useEffect(() => {
