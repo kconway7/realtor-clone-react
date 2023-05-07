@@ -15,6 +15,7 @@ import { FaShare, FaBed, FaBath, FaParking, FaChair } from "react-icons/fa";
 import { MdLocationOn } from "react-icons/md";
 import { getAuth } from "firebase/auth";
 import Contact from "../components/Contact";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 export default function Listing() {
   const auth = getAuth();
@@ -109,14 +110,14 @@ export default function Listing() {
             <p className="bg-red-700 w-full max-w-[200px] rounded-md p-[6px] text-white text-center font-semibold shadow-md">
               {listing.type === "rent" ? "For Rent" : "For Sale"}
             </p>
-            <p className="flex bg-green-700 w-full max-w-[200px] rounded-md p-[6px] text-white text-center justify-center font-semibold shadow-md">
-              {listing.offer && (
-                <span className="">
+            {listing.offer && (
+              <p className="flex bg-green-700 w-full max-w-[200px] rounded-md p-[6px] text-white text-center justify-center font-semibold shadow-md">
+                <span>
                   ${numFormat.format(listing.price - listing.discountedPrice)}{" "}
                   discount
                 </span>
-              )}
-            </p>
+              </p>
+            )}
           </div>
           <p className="mt-3 mb-3">
             <span className="font-semibold">Descrption &ndash; </span>
@@ -157,7 +158,26 @@ export default function Listing() {
           )}
         </div>
         {/* MAP */}
-        <div className="bg-blue-300 w-full h-[200px] lg-[400px] z-10 overflow-x-hidden ml-6"></div>
+        <div className="w-full h-[200px] md:h-[400px] z-10 overflow-x-hidden mt-6 lg:mt-0 md:ml-6">
+          <MapContainer
+            center={[listing.geolocation.lat, listing.geolocation.lng]}
+            zoom={13}
+            scrollWheelZoom={false}
+            style={{ height: "100%", width: "100%" }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker
+              position={[listing.geolocation.lat, listing.geolocation.lng]}
+            >
+              <Popup>
+                A pretty CSS3 popup. <br /> Easily customizable.
+              </Popup>
+            </Marker>
+          </MapContainer>
+        </div>
       </div>
     </main>
   );
