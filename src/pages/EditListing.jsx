@@ -278,7 +278,7 @@ export default function EditListing() {
           id="name"
           value={name}
           onChange={onChange}
-          placeholder="Property Name"
+          placeholder="Name of Listing"
           maxLength={"32"}
           minLength={"10"}
           required
