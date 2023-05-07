@@ -15,3 +15,11 @@ body {
   background: #a8dadc !important;
   height: 7px !important;
 }
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  scrollbar-width: none;
+}
