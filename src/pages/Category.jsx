@@ -12,20 +12,23 @@ import { toast } from "react-toastify";
 import { db } from "../firebase";
 import Spinner from "../components/Spinner";
 import ListingItem from "../components/ListingItem";
+import { useParams } from "react-router";
 
-export default function Offers() {
+export default function Category() {
   const [listings, setListings] = useState(null);
   const [loading, setLoading] = useState(true);
   //Hook for loading more listings
   const [lastFetchedListing, setLastFetchedListing] = useState(null);
-  //Retrieve offer listings from firebase
+  const params = useParams();
+
+  //Retrieve rent or sale listings from firebase
   useEffect(() => {
     async function fetchListings() {
       try {
         const listingRef = collection(db, "listings");
         const q = query(
           listingRef,
-          where("offer", "==", true),
+          where("type", "==", params.categoryName),
           orderBy("timestamp", "desc"),
           limit(3)
         );
@@ -57,7 +60,7 @@ export default function Offers() {
       const listingRef = collection(db, "listings");
       const q = query(
         listingRef,
-        where("offer", "==", true),
+        where("type", "==", params.categoryName),
         orderBy("timestamp", "desc"),
         startAfter(lastFetchedListing),
         limit(4)
@@ -80,12 +83,15 @@ export default function Offers() {
       if (listings.length === 0) toast.info("No more listings");
     } catch (error) {
       toast("Could not retrieve listings");
+      console.error(error);
     }
   }
 
   return (
     <div className="max-w-6xl mx-auto px-3 ">
-      <h1 className="text-3xl text-center mt-6 font-bold mb-6">Offers</h1>
+      <h1 className="text-3xl text-center mt-6 font-bold mb-6">
+        {params.categoryName === "rent" ? "Places for rent" : "Places for sale"}
+      </h1>
       {loading ? (
         <Spinner />
       ) : listings && listings.length > 0 ? (
@@ -105,8 +111,8 @@ export default function Offers() {
             <div className="flex justify-center items-center">
               <button
                 className="bg-blue-600 px-3 py-1.5 text-white border rounded-md mb-6 mt-6 text-lg font-semibold
-              hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 hover:shadow-lg hover:border-blue-950
-              transition duration-200 ease-in-out"
+                hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-800 hover:shadow-lg hover:border-blue-950
+                transition duration-200 ease-in-out"
                 onClick={onFetchMoreListings}
               >
                 Load more
@@ -115,7 +121,7 @@ export default function Offers() {
           )}
         </>
       ) : (
-        <p>There are no current offers</p>
+        <p>There are no current listings</p>
       )}
     </div>
   );

@@ -519,8 +519,8 @@ export default function EditListing() {
         {/* IMAGES FILE UPLOAD */}
         <div className="mb-6">
           <p className="text-lg font-semibold">Images</p>
-          <p className="text-gray-500">
-            The first image will be the cover (Maximum: 6)
+          <p className="text-gray-500 text-sm">
+            The first image will be the cover (Maximum: 6 - Max Size: 2MB)
           </p>
           <input
             type="file"
