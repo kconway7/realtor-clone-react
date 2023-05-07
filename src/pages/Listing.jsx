@@ -11,10 +11,12 @@ import SwiperCore, {
   Pagination,
 } from "swiper";
 import "swiper/css/bundle";
-import { FaShare } from "react-icons/fa";
+import { FaShare, FaBed, FaBath, FaParking, FaChair } from "react-icons/fa";
+import { MdLocationOn } from "react-icons/md";
 import { toast } from "react-toastify";
 
 export default function Listing() {
+  const numFormat = Intl.NumberFormat("en-US");
   const params = useParams();
   //hooks
   const [listing, setListing] = useState(null);
@@ -22,8 +24,8 @@ export default function Listing() {
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
 
   SwiperCore.use([Autoplay, Navigation, Pagination]);
-
   //Fetches the listing id matching the param
+
   useEffect(() => {
     async function fetchListing() {
       const docRef = doc(db, "listings", params.listingId);
@@ -86,6 +88,59 @@ export default function Listing() {
           Link Copied
         </p>
       )}
+      <div className="flex flex-col md:flex-row max-6xl lg:mx-auto m-4 p-4 rounded-lg shadow-lg bg-white lg:space-x-5">
+        {/* LISTING INFORMATION */}
+        <div className="w-full">
+          <p className="text-2xl font-bold mb-3 text-blue-900">
+            {listing.name} - $
+            {listing.offer
+              ? numFormat.format(listing.discountedPrice)
+              : numFormat.format(listing.price)}
+            {listing.type === "rent" && " / month"}
+          </p>
+          <div className="flex space-x-1 items-center mt-3 mb-4">
+            <MdLocationOn className="text-green-700" />
+            <p className="font-semibold ">{listing.address}</p>
+          </div>
+          <div className="flex justify-start items-center space-x-4 w-[75%]">
+            <p className="bg-red-700 w-full max-w-[200px] rounded-md p-[6px] text-white text-center font-semibold shadow-md">
+              {listing.type === "rent" ? "For Rent" : "For Sale"}
+            </p>
+            <p className="flex bg-green-700 w-full max-w-[200px] rounded-md p-[6px] text-white text-center justify-center font-semibold shadow-md">
+              {listing.offer && (
+                <span className="">
+                  ${numFormat.format(listing.price - listing.discountedPrice)}{" "}
+                  discount
+                </span>
+              )}
+            </p>
+          </div>
+          <p className="mt-3 mb-3">
+            <span className="font-semibold">Descrption &ndash; </span>
+            {listing.description}
+          </p>
+          <ul className="flex gap-4 lg:space-x-10 text-sm font-semibold">
+            <li className="flex items-center whitespace-nowrap">
+              <FaBed className="text-lg mr-1" />
+              {+listing.bedrooms > 1 ? `${listing.bedrooms} Beds` : "1 Bed"}
+            </li>
+            <li className="flex items-center whitespace-nowrap">
+              <FaBath className="h-[15px] mr-1" />
+              {+listing.bathrooms > 1 ? `${listing.bathrooms} Baths` : "1 Bath"}
+            </li>
+            <li className="flex items-center whitespace-nowrap">
+              <FaParking className="h-[15px] mr-1" />
+              {listing.parking ? `Parking Available` : "No Parking"}
+            </li>
+            <li className="flex items-center whitespace-nowrap">
+              <FaParking className="h-[15px] mr-1" />
+              {listing.furnished ? `Furnished` : "Not Furnished"}
+            </li>
+          </ul>
+        </div>
+        {/* MAP */}
+        <div className="bg-blue-300 w-full h-[200px] lg-[400px] z-10 overflow-x-hidden ml-6"></div>
+      </div>
     </main>
   );
 }
